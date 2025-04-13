@@ -1,0 +1,20 @@
+# Ignore heatmap_app folder
+heatmap_app/
+
+# Other common files and folders to ignore
+
+# Node.js
+node_modules/
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# OS files (macOS, Linux, Windows)
+.DS_Store
+Thumbs.db
+
+# Package lock file (optional, if you prefer not to upload it)
+package-lock.json
