@@ -29,6 +29,7 @@ app.use(bodyParser.json());
 const LocationSchema = new mongoose.Schema({
   latitude: { type: Number, required: true },
   longitude: { type: Number, required: true },
+  intensity: { type: Number, default: 0 },
   timestamp: { type: Date, default: Date.now },
 });
 
@@ -36,7 +37,7 @@ const Location = mongoose.model("Location", LocationSchema);
 
 // POST endpoint to receive location data
 app.post("/api/location", async (req, res) => {
-  const { latitude, longitude } = req.body;
+  const { latitude, longitude, intensity } = req.body;
 
   // Validation: Check if latitude and longitude are present
   if (!latitude || !longitude) {
@@ -46,7 +47,7 @@ app.post("/api/location", async (req, res) => {
   }
 
   try {
-    const newLocation = new Location({ latitude, longitude });
+    const newLocation = new Location({ latitude, longitude, intensity });
     await newLocation.save();
     res.status(201).json({ message: "Location saved successfully" });
   } catch (err) {
