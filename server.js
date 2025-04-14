@@ -44,6 +44,7 @@ const SourceReview = mongoose.model("SourceReview", sourceReviewSchema);
 // ----------- Report Schema (Without URL) -----------
 
 // Report Schema (without URL)
+// Report Schema (without URL)
 const reportSchema = new mongoose.Schema({
   title: { type: String, required: true },
   tags: [String],
@@ -52,6 +53,7 @@ const reportSchema = new mongoose.Schema({
     longitude: { type: Number, required: true },
   },
   description: { type: String, required: true },
+  intensity: { type: Number, default: 0 }, // ✅ Added optional intensity field
   timestamp: { type: Date, default: Date.now },
 });
 
@@ -105,12 +107,10 @@ app.post("/api/reports", async (req, res) => {
 
   // Validate Title, Description, and Location
   if (!title || !description || !location?.latitude || !location?.longitude) {
-    return res
-      .status(400)
-      .json({
-        error:
-          "Title, Description, and Location (latitude, longitude) are required",
-      });
+    return res.status(400).json({
+      error:
+        "Title, Description, and Location (latitude, longitude) are required",
+    });
   }
 
   try {
