@@ -11,65 +11,136 @@ const PORT = process.env.PORT || 10000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// MongoDB connection with try-catch block
+// MongoDB connection
 (async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log("MongoDB connected successfully");
+    console.log("✅ MongoDB connected successfully");
   } catch (err) {
-    console.error("Error connecting to MongoDB:", err.message);
-    process.exit(1); // Exit the application if the connection fails
+    console.error("❌ Error connecting to MongoDB:", err.message);
+    process.exit(1);
   }
 })();
 
-// Schema definition for storing location data
-const LocationSchema = new mongoose.Schema({
-  latitude: { type: Number, required: true },
-  longitude: { type: Number, required: true },
-  intensity: { type: Number, default: 0 },
+// ----------- Source Review Schema -----------
+
+// Source Review Schema (with URL)
+const sourceReviewSchema = new mongoose.Schema({
+  url: { type: String, required: true },
+  location: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+  },
+  tags: [String],
+  description: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
 });
 
-const Location = mongoose.model("Location", LocationSchema);
+const SourceReview = mongoose.model("SourceReview", sourceReviewSchema);
 
-// POST endpoint to receive location data
-app.post("/api/location", async (req, res) => {
-  const { latitude, longitude, intensity } = req.body;
+// ----------- Report Schema (Without URL) -----------
 
-  // Validation: Check if latitude and longitude are present
-  if (!latitude || !longitude) {
-    return res
-      .status(400)
-      .json({ error: "Latitude and Longitude are required" });
+// Report Schema (without URL)
+const reportSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  tags: [String],
+  location: {
+    latitude: { type: Number, required: true },
+    longitude: { type: Number, required: true },
+  },
+  description: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+});
+
+const Report = mongoose.model("Report", reportSchema);
+
+// ----------- Routes -----------
+
+// POST - Submit a Source Review (with URL)
+app.post("/api/source-reviews", async (req, res) => {
+  const { url, location, tags, description } = req.body;
+
+  // Validate URL and Description
+  if (!url || !description) {
+    return res.status(400).json({ error: "URL and Description are required" });
   }
 
   try {
-    const newLocation = new Location({ latitude, longitude, intensity });
-    await newLocation.save();
-    res.status(201).json({ message: "Location saved successfully" });
+    const newSourceReview = new SourceReview({
+      url,
+      location,
+      tags,
+      description,
+    });
+
+    await newSourceReview.save();
+    res.status(201).json({ message: "Source review submitted successfully" });
   } catch (err) {
-    console.error("Error saving location:", err.message);
+    console.error("Error submitting source review:", err.message);
     res
       .status(500)
-      .json({ error: "Failed to save location, please try again later" });
+      .json({ error: "Server error while submitting source review" });
   }
 });
 
-// GET endpoint to fetch all locations
-app.get("/api/locations", async (req, res) => {
+// GET - Fetch all Source Reviews
+app.get("/api/source-reviews", async (req, res) => {
   try {
-    const locations = await Location.find({}).sort({ timestamp: -1 }); // Sort by timestamp descending
-    res.status(200).json(locations);
+    const sourceReviews = await SourceReview.find({}).sort({ timestamp: -1 });
+    res.status(200).json(sourceReviews);
   } catch (err) {
-    console.error("Error fetching locations:", err.message);
-    res.status(500).json({ error: "Failed to fetch locations" });
+    console.error("Error fetching source reviews:", err.message);
+    res
+      .status(500)
+      .json({ error: "Server error while fetching source reviews" });
   }
 });
 
-// Start server
+// POST - Submit a Report (without URL)
+app.post("/api/reports", async (req, res) => {
+  const { title, tags, description, location } = req.body;
+
+  // Validate Title, Description, and Location
+  if (!title || !description || !location?.latitude || !location?.longitude) {
+    return res
+      .status(400)
+      .json({
+        error:
+          "Title, Description, and Location (latitude, longitude) are required",
+      });
+  }
+
+  try {
+    const newReport = new Report({
+      title,
+      tags,
+      description,
+      location,
+    });
+
+    await newReport.save();
+    res.status(201).json({ message: "Report submitted successfully" });
+  } catch (err) {
+    console.error("Error submitting report:", err.message);
+    res.status(500).json({ error: "Server error while submitting report" });
+  }
+});
+
+// GET - Fetch all Reports
+app.get("/api/reports", async (req, res) => {
+  try {
+    const reports = await Report.find({}).sort({ timestamp: -1 });
+    res.status(200).json(reports);
+  } catch (err) {
+    console.error("Error fetching reports:", err.message);
+    res.status(500).json({ error: "Server error while fetching reports" });
+  }
+});
+
+// ----------- Start Server -----------
 app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
