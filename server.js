@@ -103,9 +103,8 @@ app.get("/api/source-reviews", async (req, res) => {
 
 // POST - Submit a Report (without URL)
 app.post("/api/reports", async (req, res) => {
-  const { title, tags, description, location } = req.body;
+  const { title, tags, description, location, intensity } = req.body;
 
-  // Validate Title, Description, and Location
   if (!title || !description || !location?.latitude || !location?.longitude) {
     return res.status(400).json({
       error:
@@ -119,6 +118,7 @@ app.post("/api/reports", async (req, res) => {
       tags,
       description,
       location,
+      intensity, // ✅ include this
     });
 
     await newReport.save();
