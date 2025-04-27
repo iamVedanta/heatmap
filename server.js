@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const axios = require("axios"); // Import axios for making HTTP requests
 require("dotenv").config();
 
 const app = express();
@@ -25,25 +26,8 @@ app.use(bodyParser.json());
   }
 })();
 
-// ----------- Source Review Schema -----------
+// ----------- Report Schema -----------
 
-// Source Review Schema (with URL)
-const sourceReviewSchema = new mongoose.Schema({
-  url: { type: String, required: true },
-  location: {
-    latitude: { type: Number },
-    longitude: { type: Number },
-  },
-  tags: [String],
-  description: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now },
-});
-
-const SourceReview = mongoose.model("SourceReview", sourceReviewSchema);
-
-// ----------- Report Schema (Without URL) -----------
-
-// Report Schema (without URL)
 // Report Schema (without URL)
 const reportSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -52,54 +36,15 @@ const reportSchema = new mongoose.Schema({
     latitude: { type: Number, required: true },
     longitude: { type: Number, required: true },
   },
+  location_name: { type: String }, // New field for storing location name
   description: { type: String, required: true },
-  intensity: { type: Number, default: 0 }, // ✅ Added optional intensity field
+  intensity: { type: Number, default: 0 },
   timestamp: { type: Date, default: Date.now },
 });
 
 const Report = mongoose.model("Report", reportSchema);
 
 // ----------- Routes -----------
-
-// POST - Submit a Source Review (with URL)
-app.post("/api/source-reviews", async (req, res) => {
-  const { url, location, tags, description } = req.body;
-
-  // Validate URL and Description
-  if (!url || !description) {
-    return res.status(400).json({ error: "URL and Description are required" });
-  }
-
-  try {
-    const newSourceReview = new SourceReview({
-      url,
-      location,
-      tags,
-      description,
-    });
-
-    await newSourceReview.save();
-    res.status(201).json({ message: "Source review submitted successfully" });
-  } catch (err) {
-    console.error("Error submitting source review:", err.message);
-    res
-      .status(500)
-      .json({ error: "Server error while submitting source review" });
-  }
-});
-
-// GET - Fetch all Source Reviews
-app.get("/api/source-reviews", async (req, res) => {
-  try {
-    const sourceReviews = await SourceReview.find({}).sort({ timestamp: -1 });
-    res.status(200).json(sourceReviews);
-  } catch (err) {
-    console.error("Error fetching source reviews:", err.message);
-    res
-      .status(500)
-      .json({ error: "Server error while fetching source reviews" });
-  }
-});
 
 // POST - Submit a Report (without URL)
 app.post("/api/reports", async (req, res) => {
@@ -113,14 +58,26 @@ app.post("/api/reports", async (req, res) => {
   }
 
   try {
+    // Step 1: Get location name using the latitude and longitude
+    const locationResponse = await axios.get(
+      `https://nominatim.openstreetmap.org/reverse?lat=${location.latitude}&lon=${location.longitude}&format=json`
+    );
+
+    // Step 2: Extract the location name from the API response
+    const locationName =
+      locationResponse.data.display_name || "Unknown Location";
+
+    // Step 3: Create a new report with the location name
     const newReport = new Report({
       title,
       tags,
       description,
       location,
-      intensity, // ✅ include this
+      location_name: locationName, // Store the location name
+      intensity,
     });
 
+    // Save the report to the database
     await newReport.save();
     res.status(201).json({ message: "Report submitted successfully" });
   } catch (err) {
